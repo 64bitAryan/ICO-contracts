@@ -37,20 +37,20 @@ describe("Affiliate test", () => {
   });
 
   it("should register affiliate", async () => {
-    await affiliateContract.registerAsAffiliate(add1.address);
+    await affiliateContract.approveAffiliates(add1.address);
     const res = await affiliateContract.affiliates(add1.address);
     expect(res).to.equal(2);
   });
 
   it("should add commition to affiliate address", async () => {
-    await affiliateContract.registerAsAffiliate(add1.address);
+    await affiliateContract.approveAffiliates(add1.address);
     await affiliateContract.addCommission(add1.address, 1000, add2.address);
     const res = await affiliateContract.accumulatedCommission(add1.address);
     expect(res).to.equal(20);
   });
 
   it("should add multiple commition to affiliate address", async () => {
-    await affiliateContract.registerAsAffiliate(add1.address);
+    await affiliateContract.approveAffiliates(add1.address);
     await affiliateContract.addCommission(
       add1.address,
       toWei(100),
@@ -66,7 +66,7 @@ describe("Affiliate test", () => {
   });
 
   it("should be able to withdraw commission", async () => {
-    await affiliateContract.registerAsAffiliate(add1.address);
+    await affiliateContract.approveAffiliates(add1.address);
     await affiliateContract.addCommission(
       add1.address,
       toWei(100),
@@ -80,7 +80,7 @@ describe("Affiliate test", () => {
   });
 
   it("should revert if commission is not present", async () => {
-    await affiliateContract.registerAsAffiliate(add1.address);
+    await affiliateContract.approveAffiliates(add1.address);
     await affiliateContract.addCommission(
       add1.address,
       toWei(100),

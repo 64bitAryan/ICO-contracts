@@ -13,14 +13,14 @@ contract AffiliateProgram is Ownable {
         token = _token;
     }
 
+    address[] pendingAffiliates;
     mapping(address => uint8) public affiliates;
     mapping(address => address) public customerToAffiliate;
     mapping(address => uint256) public accumulatedCommission;
 
-    event AffiliateRegistered(
-        address indexed affiliateWallet,
-        uint256 commissionRate
-    );
+    event AffiliateRegistered(address indexed affiliateWallet);
+
+    event ApproveAffiliate(address indexed affiliateWallet, uint256 commission);
 
     event AccumulatedCommission(
         address indexed customer,
@@ -31,14 +31,18 @@ contract AffiliateProgram is Ownable {
 
     event WithdrawCommission(address indexed customer, uint256 value);
 
-    function registerAsAffiliate(address _affiliateAddress) external onlyOwner {
+    function registerAsAffiliate(address _affiliateAddress) external {
+        pendingAffiliates.push(_affiliateAddress);
+        emit AffiliateRegistered(_affiliateAddress);
+    }
+
+    function approveAffiliates(address _affiliateAddress) external onlyOwner {
         require(
             affiliates[_affiliateAddress] == 0,
-            "Affiliate already registered"
+            "Affiliate already approved"
         );
-
         affiliates[_affiliateAddress] = commissionRate;
-        emit AffiliateRegistered(_affiliateAddress, commissionRate);
+        emit ApproveAffiliate(_affiliateAddress, commissionRate);
     }
 
     function addCommission(

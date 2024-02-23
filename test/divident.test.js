@@ -19,7 +19,7 @@ const parseAndTruncate = (amount) => {
   return Math.trunc(a * 100) / 100;
 };
 
-describe("Affiliate contract", () => {
+describe("Divident test contract", () => {
   let add1, add2, tokenContract, provider, dividentContract, usdtTokenContract;
   const oneYear = 60 * 60 * 24 * 365 + 5;
   const stakeAmount = toWei(1000);
