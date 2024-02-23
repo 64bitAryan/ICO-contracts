@@ -1,6 +1,5 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-const { EventEmitterWrapper } = require("hardhat/internal/util/event-emitter");
 require("dotenv").config();
 
 const toWei = (amount) => ethers.parseEther(amount.toString());
