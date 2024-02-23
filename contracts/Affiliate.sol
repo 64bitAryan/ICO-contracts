@@ -36,13 +36,15 @@ contract AffiliateProgram is Ownable {
         emit AffiliateRegistered(_affiliateAddress);
     }
 
-    function approveAffiliates(address _affiliateAddress) external onlyOwner {
-        require(
-            affiliates[_affiliateAddress] == 0,
-            "Affiliate already approved"
-        );
-        affiliates[_affiliateAddress] = commissionRate;
-        emit ApproveAffiliate(_affiliateAddress, commissionRate);
+    function approveAffiliates(
+        address[] memory _affiliateAddress
+    ) external onlyOwner {
+        for (uint i = 0; i < _affiliateAddress.length; i++) {
+            if (affiliates[_affiliateAddress[i]] != 0) {
+                affiliates[_affiliateAddress[i]] = commissionRate;
+                emit ApproveAffiliate(_affiliateAddress[i], commissionRate);
+            }
+        }
     }
 
     function addCommission(
