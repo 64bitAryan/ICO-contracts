@@ -36,20 +36,22 @@ contract AffiliateProgram is Ownable {
         emit AffiliateRegistered(_affiliateAddress);
     }
 
-    function approveAffiliates(address _affiliateAddress) external onlyOwner {
-        require(
-            affiliates[_affiliateAddress] == 0,
-            "Affiliate already approved"
-        );
-        affiliates[_affiliateAddress] = commissionRate;
-        emit ApproveAffiliate(_affiliateAddress, commissionRate);
+    function approveAffiliates(
+        address[] memory _affiliateAddress
+    ) external onlyOwner {
+        for (uint i = 0; i < _affiliateAddress.length; i++) {
+            if (affiliates[_affiliateAddress[i]] == 0) {
+                affiliates[_affiliateAddress[i]] = commissionRate;
+                emit ApproveAffiliate(_affiliateAddress[i], commissionRate);
+            }
+        }
     }
 
     function addCommission(
         address _affiliate,
         uint256 _boughtValue,
         address _buyer
-    ) external onlyOwner {
+    ) internal {
         require(_boughtValue > 0, "Purchase value must be greater than 0");
         require(affiliates[_affiliate] > 0, "Invalid affiliate");
         require(
@@ -83,10 +85,6 @@ contract AffiliateProgram is Ownable {
         accumulatedCommission[msg.sender] = 0;
         token.transfer(msg.sender, commission);
         emit WithdrawCommission(msg.sender, commission);
-    }
-
-    function withdrawTokes() external onlyOwner {
-        token.transfer(owner(), token.balanceOf(address(this)));
     }
 
     function getCustomerAffiliate(
