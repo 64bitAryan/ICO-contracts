@@ -2,65 +2,16 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "./Staking.sol";
 
-contract DividentProgram is Ownable {
-    IERC20 public stakeToken;
-    IERC20 public usdtToken;
-    uint256 public LOCKIN_TIME;
-
+contract StakingAndDivident is Ownable, TokenStaking {
     constructor(
-        IERC20 _stakeToken,
         IERC20 _usdtToken,
+        address _tokenAddress,
+        uint256 _StakingRewardRate,
         uint256 _lockinTime
-    ) Ownable(msg.sender) {
-        stakeToken = _stakeToken;
-        LOCKIN_TIME = _lockinTime;
+    ) TokenStaking(_tokenAddress, _StakingRewardRate, _lockinTime) {
         usdtToken = _usdtToken;
-    }
-
-    struct Stake {
-        uint256 amount;
-        uint256 addTime;
-        uint256 lastUpdateTime;
-    }
-
-    fallback() external payable {}
-
-    receive() external payable {}
-
-    mapping(address => Stake[]) public stakedAmounts;
-
-    event Staked(address indexed user, uint256 amount);
-    event Unstaked(address indexed user, uint256 amount, uint256 reward);
-    event ClaimDivident(address indexed user, uint256 amount, uint256 reward);
-
-    function stake(uint256 _amount) public {
-        require(_amount > 0, "Amount must be greater than 0");
-        require(
-            stakeToken.balanceOf(msg.sender) >= _amount,
-            "Not enough balance"
-        );
-        require(
-            stakeToken.allowance(msg.sender, address(this)) >= _amount,
-            "Not enough allowance"
-        );
-        stakeToken.transferFrom(msg.sender, address(this), _amount);
-        stakedAmounts[msg.sender].push(
-            Stake(_amount, block.timestamp, block.timestamp)
-        );
-        emit Staked(msg.sender, _amount);
-    }
-
-    function unstake(uint256 _index) external {
-        Stake memory userStake = stakedAmounts[msg.sender][_index];
-        require(userStake.amount > 0, "No stake available");
-        if (userStake.lastUpdateTime + LOCKIN_TIME <= block.timestamp) {
-            claimDivident(_index);
-        }
-        delete stakedAmounts[msg.sender][_index];
-        stakeToken.transfer(msg.sender, userStake.amount);
-        emit Unstaked(msg.sender, userStake.amount, 0);
     }
 
     function claimDivident(uint256 _index) public {
@@ -80,9 +31,9 @@ contract DividentProgram is Ownable {
         emit ClaimDivident(msg.sender, userStake.amount, dividentReward);
     }
 
-    function calculateReward(
-        uint256 _index,
-        address _user
+    function calculateDividentReward(
+        address _user,
+        uint256 _index
     ) public view returns (uint256) {
         Stake memory userStake = stakedAmounts[_user][_index];
         require(
@@ -96,7 +47,7 @@ contract DividentProgram is Ownable {
     function _calculateReward() internal view returns (uint256) {
         uint256 etherPresent = address(this).balance;
         uint256 usdtPresent = usdtToken.balanceOf(address(this));
-        uint256 tokenTotalSupply = stakeToken.totalSupply();
+        uint256 tokenTotalSupply = token.totalSupply();
         uint256 divident = (usdtPresent + etherPresent) / tokenTotalSupply;
         require(divident > 0, "Divident is 0");
         return divident;

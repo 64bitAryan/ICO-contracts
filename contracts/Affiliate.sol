@@ -40,7 +40,7 @@ contract AffiliateProgram is Ownable {
         address[] memory _affiliateAddress
     ) external onlyOwner {
         for (uint i = 0; i < _affiliateAddress.length; i++) {
-            if (affiliates[_affiliateAddress[i]] != 0) {
+            if (affiliates[_affiliateAddress[i]] == 0) {
                 affiliates[_affiliateAddress[i]] = commissionRate;
                 emit ApproveAffiliate(_affiliateAddress[i], commissionRate);
             }
