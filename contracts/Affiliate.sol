@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract AffiliateProgram is Ownable {
-    uint8 commissionRate;
+    uint8 public commissionRate;
     IERC20 public token;
 
     constructor(uint8 _rate, IERC20 _token) Ownable(msg.sender) {
@@ -13,14 +13,11 @@ contract AffiliateProgram is Ownable {
         token = _token;
     }
 
-    address[] pendingAffiliates;
     mapping(address => uint8) public affiliates;
     mapping(address => address) public customerToAffiliate;
     mapping(address => uint256) public accumulatedCommission;
 
     event AffiliateRegistered(address indexed affiliateWallet);
-
-    event ApproveAffiliate(address indexed affiliateWallet, uint256 commission);
 
     event AccumulatedCommission(
         address indexed customer,
@@ -31,20 +28,11 @@ contract AffiliateProgram is Ownable {
 
     event WithdrawCommission(address indexed customer, uint256 value);
 
-    function registerAsAffiliate(address _affiliateAddress) external {
-        pendingAffiliates.push(_affiliateAddress);
-        emit AffiliateRegistered(_affiliateAddress);
-    }
+    event ChangeCommisionRate(uint8 newRate);
 
-    function approveAffiliates(
-        address[] memory _affiliateAddress
-    ) external onlyOwner {
-        for (uint i = 0; i < _affiliateAddress.length; i++) {
-            if (affiliates[_affiliateAddress[i]] == 0) {
-                affiliates[_affiliateAddress[i]] = commissionRate;
-                emit ApproveAffiliate(_affiliateAddress[i], commissionRate);
-            }
-        }
+    function registerAsAffiliate(address _affiliateAddress) external {
+        affiliates[_affiliateAddress] = commissionRate;
+        emit AffiliateRegistered(_affiliateAddress);
     }
 
     function addCommission(
@@ -91,5 +79,10 @@ contract AffiliateProgram is Ownable {
         address _customer
     ) external view returns (address) {
         return customerToAffiliate[_customer];
+    }
+
+    function changeCommissionRate(uint8 _newRate) external onlyOwner {
+        commissionRate = _newRate;
+        emit ChangeCommisionRate(commissionRate);
     }
 }
