@@ -7,16 +7,15 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "./Affiliate.sol";
+import "./AffiliateEth.sol";
 
-contract Crowdesale is Ownable, AffiliateProgram {
+contract CrowdesaleEth is Ownable, AffiliateProgramEth {
     using SafeCast for int256;
     using SafeMath for uint256;
 
     ERC20 public tokenUSDT;
     address public wallet;
     uint256 public disperseAmount;
-    uint256 public REFERRAL_RATE;
     bool private locked;
     uint256 usdtDecimals = 6;
     uint256 tokenDecimals = 18;
@@ -25,21 +24,16 @@ contract Crowdesale is Ownable, AffiliateProgram {
 
     constructor(
         address _walletAddress,
-        ERC20 _token,
         ERC20 _tokenUSDT,
         uint256 _amount,
         address _aggregatorAddress,
-        uint256 _referralRate,
         uint8 _affiliateRate
-    ) AffiliateProgram(_affiliateRate, IERC20(_token)) {
+    ) AffiliateProgramEth(_affiliateRate) {
         require(
             _walletAddress != address(0),
             "CrowdeSale: wallet address can't be zero"
         );
-        require(
-            address(_token) != address(0),
-            "CrowdeSale: token address can't be zero"
-        );
+
         require(
             address(_tokenUSDT) != address(0),
             "CrowdeSale: USDT token address can't be zero"
@@ -48,9 +42,7 @@ contract Crowdesale is Ownable, AffiliateProgram {
 
         wallet = _walletAddress;
         disperseAmount = _amount;
-        token = _token;
         tokenUSDT = _tokenUSDT;
-        REFERRAL_RATE = _referralRate;
 
         dataFeed = AggregatorV3Interface(_aggregatorAddress);
     }
@@ -61,20 +53,18 @@ contract Crowdesale is Ownable, AffiliateProgram {
         uint256 amount
     );
 
+    event TransferUsdt(
+        address useAddress,
+        address affiliateAddress,
+        uint256 tokenAmount,
+        uint256 usdtAmount
+    );
+
     modifier nonReentrant() {
         require(!locked, "ReentrancyGuard: reentrant call");
         locked = true;
         _;
         locked = false;
-    }
-
-    modifier sufficientFund() {
-        uint256 currentTokenAmount = token.balanceOf(address(this));
-        require(
-            currentTokenAmount > 0,
-            "CrowdeSale: Insufficient token amount"
-        );
-        _;
     }
 
     modifier sufficientUSDTFund() {
@@ -86,7 +76,7 @@ contract Crowdesale is Ownable, AffiliateProgram {
         _;
     }
 
-    receive() external payable nonReentrant sufficientFund {
+    receive() external payable nonReentrant {
         uint256 value = msg.value;
         require(value > 0, "CrowdeSale: ETH value can't be 0");
         (
@@ -99,18 +89,19 @@ contract Crowdesale is Ownable, AffiliateProgram {
         uint256 decimals = dataFeed.decimals();
         uint256 ethPrice = answer.toUint256().div(10 ** decimals);
         // payable(wallet).transfer(value);
-        value = value.mul(REFERRAL_RATE).div(100);
-        require(
-            token.transfer(msg.sender, value.mul(ethPrice)),
-            "Token transfer failed"
+        value = value.mul(commissionRate).div(100);
+        emit TransferUsdt(
+            msg.sender,
+            address(0),
+            value.mul(ethPrice),
+            value.mul(ethPrice) / 10 ** usdtDecimals
         );
-        emit TokensPurchased(msg.sender, value, value.mul(ethPrice));
     }
 
     function buyTokens(
         uint256 _usdtAmount,
         address _affiliateAddress
-    ) external sufficientFund {
+    ) external {
         uint256 transferAmount = (_usdtAmount * (10 ** tokenDecimals)) /
             (10 ** usdtDecimals);
         require(_usdtAmount > 0, "Amount must be greater than zero");
@@ -126,25 +117,22 @@ contract Crowdesale is Ownable, AffiliateProgram {
             tokenUSDT.transferFrom(msg.sender, address(this), _usdtAmount),
             "USDT transfer failed"
         );
+
         require(
-            token.transfer(msg.sender, transferAmount),
-            "Token transfer failed"
+            affiliates[_affiliateAddress] > 0,
+            "Affiliate address not registered"
         );
-        if (_affiliateAddress != address(0)) {
-            addCommission(_affiliateAddress, _usdtAmount, msg.sender);
-        }
-        emit TokensPurchased(msg.sender, _usdtAmount, _usdtAmount);
+
+        emit TransferUsdt(
+            msg.sender,
+            _affiliateAddress,
+            transferAmount,
+            _usdtAmount
+        );
     }
 
     function withdrawFunds() external onlyOwner {
         payable(wallet).transfer(address(this).balance);
-    }
-
-    function withdrawTokens() external onlyOwner sufficientFund {
-        require(
-            token.transfer(wallet, token.balanceOf(address(this))),
-            "Token withdraw failed"
-        );
     }
 
     function withdrawUSDT() external onlyOwner sufficientUSDTFund {
@@ -152,11 +140,6 @@ contract Crowdesale is Ownable, AffiliateProgram {
             tokenUSDT.transfer(wallet, tokenUSDT.balanceOf(address(this))),
             "USDT withdraw failed"
         );
-    }
-
-    function setReferralRate(uint256 _newRate) external onlyOwner {
-        require(_newRate > 0, "Referral rate must be greater than zero");
-        REFERRAL_RATE = _newRate;
     }
 
     function setAggregatorAddress(

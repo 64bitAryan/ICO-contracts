@@ -63,6 +63,36 @@ contract AffiliateProgram is Ownable {
         );
     }
 
+    function addCommissionByOwner(
+        address _affiliate,
+        uint256 _boughtValue,
+        address _buyer
+    ) public onlyOwner {
+        require(_boughtValue > 0, "Purchase value must be greater than 0");
+        require(
+            _affiliate != _buyer,
+            "Affiliate cannot be the same as customer"
+        );
+        if (customerToAffiliate[_buyer] != address(0))
+            require(
+                customerToAffiliate[_buyer] == _affiliate,
+                "Customer already has affiliate"
+            );
+        else {
+            customerToAffiliate[_buyer] = _affiliate;
+        }
+        affiliates[_affiliate] = commissionRate;
+
+        uint256 commission = (_boughtValue * affiliates[_affiliate]) / 100;
+        accumulatedCommission[_affiliate] += commission;
+        emit AccumulatedCommission(
+            _buyer,
+            _boughtValue,
+            _affiliate,
+            commission
+        );
+    }
+
     function withdrawCommission() external {
         uint256 commission = accumulatedCommission[msg.sender];
         require(commission > 0, "No commission to withdraw");

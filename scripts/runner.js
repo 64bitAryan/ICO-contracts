@@ -1,6 +1,7 @@
 const { ethers } = require("hardhat");
 require("dotenv").config();
 const affiliateAbi = require("../artifacts/contracts/Affiliate.sol/AffiliateProgram.json");
+const tokenAbi = require("../artifacts/contracts/token.sol/FlameToken.json");
 
 const toWei = (amount) => ethers.parseEther(amount.toString());
 const parseAndTruncate = (amount) => {
@@ -70,11 +71,23 @@ const getGasUsed = async (trxHash) => {
   }
 };
 
-const main = async () => {
-  // const hash = await addAffiliateAddress();
-  await getGasUsed(
-    "0x0f4342627e495eb3ca542c593118b38db9c653d2831566dab0dc60e2b38e63c6"
+const mintTokenToContract = async () => {
+  const provider = new ethers.JsonRpcProvider(process.env.sepolia_network);
+  const Wallet = new ethers.Wallet(process.env.admin_private_key, provider);
+  const tokenContract = new ethers.Contract(
+    "0x45abF920E3360bE42b48e83ec275f845Df93F329",
+    tokenAbi.abi,
+    Wallet
   );
+  const res = await tokenContract.mint(
+    "0xfad6966936179Ea1E90d33DBd27B53b779c81BD2",
+    toWei("1000000000000")
+  );
+  console.log(res.hash);
+};
+
+const main = async () => {
+  await mintTokenToContract();
 };
 
 main().catch((err) => {
