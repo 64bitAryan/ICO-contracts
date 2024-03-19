@@ -9,11 +9,9 @@ contract TokenStaking is Ownable, Store {
 
     constructor(
         address _tokenAddress,
-        uint256 _rewardRate,
         uint256 _lockinTime
     ) Ownable(msg.sender) {
         token = IERC20(_tokenAddress);
-        REWARD_RATE = _rewardRate;
         LOCKIN_TIME = _lockinTime;
     }
 
@@ -57,19 +55,9 @@ contract TokenStaking is Ownable, Store {
         uint256 _index
     ) public view returns (uint256) {
         uint256 amount = stakedAmounts[_user][_index].amount;
-        (, uint256 timeElapsed) = block.timestamp.trySub(
-            stakedAmounts[_user][_index].addTime
-        );
-        (, uint256 a) = amount.tryMul(REWARD_RATE);
-        (, uint256 b) = a.tryMul(timeElapsed);
-        (, uint256 c) = b.tryDiv(100);
-        (, uint256 reward) = c.tryDiv(1 weeks);
+        uint256 profitUsdt = usdtToken.balanceOf(address(this));
+        (, uint256 reward) = profitUsdt.tryDiv(amount);
         return reward;
-    }
-
-    function setRewardRate(uint256 _newRate) external onlyOwner {
-        require(_newRate > 0, "Reward rate must be greater than zero");
-        REWARD_RATE = _newRate;
     }
 
     function setLockInTime(uint256 _newLockInTime) external onlyOwner {

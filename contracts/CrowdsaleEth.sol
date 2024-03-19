@@ -7,15 +7,15 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "./AffiliateEth.sol";
 
-contract CrowdesaleEth is Ownable, AffiliateProgramEth {
+contract CrowdesaleEth is Ownable {
     using SafeCast for int256;
     using SafeMath for uint256;
 
     ERC20 public tokenUSDT;
     address public wallet;
     uint256 public disperseAmount;
+    uint256 public REFERRAL_RATE;
     bool private locked;
     uint256 usdtDecimals = 6;
     uint256 tokenDecimals = 18;
@@ -27,8 +27,8 @@ contract CrowdesaleEth is Ownable, AffiliateProgramEth {
         ERC20 _tokenUSDT,
         uint256 _amount,
         address _aggregatorAddress,
-        uint8 _affiliateRate
-    ) AffiliateProgramEth(_affiliateRate) {
+        uint256 _referralRate
+    ) Ownable(msg.sender) {
         require(
             _walletAddress != address(0),
             "CrowdeSale: wallet address can't be zero"
@@ -43,6 +43,7 @@ contract CrowdesaleEth is Ownable, AffiliateProgramEth {
         wallet = _walletAddress;
         disperseAmount = _amount;
         tokenUSDT = _tokenUSDT;
+        REFERRAL_RATE = _referralRate;
 
         dataFeed = AggregatorV3Interface(_aggregatorAddress);
     }
@@ -89,12 +90,31 @@ contract CrowdesaleEth is Ownable, AffiliateProgramEth {
         uint256 decimals = dataFeed.decimals();
         uint256 ethPrice = answer.toUint256().div(10 ** decimals);
         // payable(wallet).transfer(value);
-        value = value.mul(commissionRate).div(100);
+        value = value.mul(REFERRAL_RATE).div(100);
+        emit TransferUsdt(msg.sender, address(0), value, value.mul(ethPrice));
+    }
+
+    function buyTokensWithEth(
+        address _affiliateAddress
+    ) external payable nonReentrant {
+        uint256 value = msg.value;
+        require(value > 0, "CrowdeSale: ETH value can't be 0");
+        (
+            ,
+            /* uint80 roundID */ int answer /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/,
+            ,
+            ,
+
+        ) = dataFeed.latestRoundData();
+        uint256 decimals = dataFeed.decimals();
+        uint256 ethPrice = answer.toUint256().div(10 ** decimals);
+        // payable(wallet).transfer(value);
+        value = value.mul(REFERRAL_RATE).div(100);
         emit TransferUsdt(
             msg.sender,
-            address(0),
-            value.mul(ethPrice),
-            value.mul(ethPrice) / 10 ** usdtDecimals
+            _affiliateAddress,
+            value,
+            value.mul(ethPrice)
         );
     }
 
@@ -116,11 +136,6 @@ contract CrowdesaleEth is Ownable, AffiliateProgramEth {
         require(
             tokenUSDT.transferFrom(msg.sender, address(this), _usdtAmount),
             "USDT transfer failed"
-        );
-
-        require(
-            affiliates[_affiliateAddress] > 0,
-            "Affiliate address not registered"
         );
 
         emit TransferUsdt(

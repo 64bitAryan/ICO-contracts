@@ -8,9 +8,8 @@ contract StakingAndDivident is Ownable, TokenStaking {
     constructor(
         IERC20 _usdtToken,
         address _tokenAddress,
-        uint256 _StakingRewardRate,
         uint256 _lockinTime
-    ) TokenStaking(_tokenAddress, _StakingRewardRate, _lockinTime) {
+    ) TokenStaking(_tokenAddress, _lockinTime) {
         usdtToken = _usdtToken;
     }
 

@@ -14,8 +14,19 @@ contract AffiliateProgram is Ownable {
     }
 
     mapping(address => uint8) public affiliates;
-    mapping(address => address) public customerToAffiliate;
     mapping(address => uint256) public accumulatedCommission;
+
+    function getAffiliates(
+        address _affiliateAddress
+    ) public view returns (uint8) {
+        return affiliates[_affiliateAddress];
+    }
+
+    function getAccumulatedCommission(
+        address _address
+    ) public view returns (uint256) {
+        return accumulatedCommission[_address];
+    }
 
     event AffiliateRegistered(address indexed affiliateWallet);
 
@@ -46,12 +57,6 @@ contract AffiliateProgram is Ownable {
             _affiliate != _buyer,
             "Affiliate cannot be the same as customer"
         );
-        if (customerToAffiliate[_buyer] != address(0))
-            require(
-                customerToAffiliate[_buyer] == _affiliate,
-                "Customer already has affiliate"
-            );
-        else customerToAffiliate[_buyer] = _affiliate;
 
         uint256 commission = (_boughtValue * affiliates[_affiliate]) / 100;
         accumulatedCommission[_affiliate] += commission;
@@ -73,18 +78,14 @@ contract AffiliateProgram is Ownable {
             _affiliate != _buyer,
             "Affiliate cannot be the same as customer"
         );
-        if (customerToAffiliate[_buyer] != address(0))
-            require(
-                customerToAffiliate[_buyer] == _affiliate,
-                "Customer already has affiliate"
-            );
-        else {
-            customerToAffiliate[_buyer] = _affiliate;
+
+        if (affiliates[_affiliate] == 0) {
+            affiliates[_affiliate] = commissionRate;
         }
-        affiliates[_affiliate] = commissionRate;
 
         uint256 commission = (_boughtValue * affiliates[_affiliate]) / 100;
         accumulatedCommission[_affiliate] += commission;
+        token.transfer(_buyer, _boughtValue);
         emit AccumulatedCommission(
             _buyer,
             _boughtValue,
@@ -103,12 +104,6 @@ contract AffiliateProgram is Ownable {
         accumulatedCommission[msg.sender] = 0;
         token.transfer(msg.sender, commission);
         emit WithdrawCommission(msg.sender, commission);
-    }
-
-    function getCustomerAffiliate(
-        address _customer
-    ) external view returns (address) {
-        return customerToAffiliate[_customer];
     }
 
     function changeCommissionRate(uint8 _newRate) external onlyOwner {

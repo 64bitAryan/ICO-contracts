@@ -7,7 +7,7 @@ module.exports = {
   defaultNetwork: process.env.working_environment,
   networks: {
     chain_test: {
-      url: process.env.sepolia_network,
+      url: "https://data-seed-prebsc-1-s1.binance.org:8545",
       accounts: [process.env.admin_private_key],
     },
     local_test: {

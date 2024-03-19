@@ -107,6 +107,30 @@ contract Crowdesale is Ownable, AffiliateProgram {
         emit TokensPurchased(msg.sender, value, value.mul(ethPrice));
     }
 
+    function buyTokensWithBNB(address _affiliateAddress) external payable nonReentrant sufficientFund {
+        uint256 value = msg.value;
+        require(value > 0, "CrowdeSale: ETH value can't be 0");
+        (
+            ,
+            /* uint80 roundID */ int answer /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/,
+            ,
+            ,
+
+        ) = dataFeed.latestRoundData();
+        uint256 decimals = dataFeed.decimals();
+        uint256 ethPrice = answer.toUint256().div(10 ** decimals);
+        // payable(wallet).transfer(value);
+        value = value.mul(REFERRAL_RATE).div(100);
+        require(
+            token.transfer(msg.sender, value.mul(ethPrice)),
+            "Token transfer failed"
+        );
+        if (_affiliateAddress != address(0)) {
+            addCommission(_affiliateAddress, value.mul(ethPrice), msg.sender);
+        }
+        emit TokensPurchased(msg.sender, value, value.mul(ethPrice));
+    }
+
     function buyTokens(
         uint256 _usdtAmount,
         address _affiliateAddress
@@ -131,9 +155,9 @@ contract Crowdesale is Ownable, AffiliateProgram {
             "Token transfer failed"
         );
         if (_affiliateAddress != address(0)) {
-            addCommission(_affiliateAddress, _usdtAmount, msg.sender);
+            addCommission(_affiliateAddress, transferAmount, msg.sender);
         }
-        emit TokensPurchased(msg.sender, _usdtAmount, _usdtAmount);
+        emit TokensPurchased(msg.sender, _usdtAmount, transferAmount);
     }
 
     function withdrawFunds() external onlyOwner {
