@@ -7,10 +7,19 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract AffiliateProgram is Ownable {
     uint8 public commissionRate;
     IERC20 public token;
+    IERC20 public tokenUSDT;
+    address public transferAccount;
 
-    constructor(uint8 _rate, IERC20 _token) Ownable(msg.sender) {
+    constructor(
+        uint8 _rate,
+        IERC20 _token,
+        IERC20 _tokenUSDT,
+        address _transferAccount
+    ) Ownable(msg.sender) {
         commissionRate = _rate;
         token = _token;
+        tokenUSDT = _tokenUSDT;
+        transferAccount = _transferAccount;
     }
 
     mapping(address => uint8) public affiliates;
@@ -40,6 +49,16 @@ contract AffiliateProgram is Ownable {
     event WithdrawCommission(address indexed customer, uint256 value);
 
     event ChangeCommisionRate(uint8 newRate);
+
+    event ChangeTokenAddress(address newTokenAddress);
+
+    modifier onlyTransferAccount() {
+        require(
+            transferAccount == msg.sender,
+            "Unauthorized Transfer Account!"
+        );
+        _;
+    }
 
     function registerAsAffiliate(address _affiliateAddress) external {
         affiliates[_affiliateAddress] = commissionRate;
@@ -71,8 +90,9 @@ contract AffiliateProgram is Ownable {
     function addCommissionByOwner(
         address _affiliate,
         uint256 _boughtValue,
+        uint256 _transferAmount,
         address _buyer
-    ) public onlyOwner {
+    ) public onlyTransferAccount {
         require(_boughtValue > 0, "Purchase value must be greater than 0");
         require(
             _affiliate != _buyer,
@@ -85,7 +105,7 @@ contract AffiliateProgram is Ownable {
 
         uint256 commission = (_boughtValue * affiliates[_affiliate]) / 100;
         accumulatedCommission[_affiliate] += commission;
-        token.transfer(_buyer, _boughtValue);
+        token.transfer(_buyer, _transferAmount);
         emit AccumulatedCommission(
             _buyer,
             _boughtValue,
@@ -98,16 +118,32 @@ contract AffiliateProgram is Ownable {
         uint256 commission = accumulatedCommission[msg.sender];
         require(commission > 0, "No commission to withdraw");
         require(
-            token.balanceOf(address(this)) > commission,
+            tokenUSDT.balanceOf(address(this)) > commission,
             "Insufficnet contract balance"
         );
         accumulatedCommission[msg.sender] = 0;
-        token.transfer(msg.sender, commission);
+        tokenUSDT.transfer(msg.sender, commission);
         emit WithdrawCommission(msg.sender, commission);
     }
 
     function changeCommissionRate(uint8 _newRate) external onlyOwner {
         commissionRate = _newRate;
         emit ChangeCommisionRate(commissionRate);
+    }
+
+    function changeTokenAddress(IERC20 _newToken) external onlyOwner {
+        token = _newToken;
+        emit ChangeTokenAddress(address(_newToken));
+    }
+
+    function changeUSDTTokenAddress(IERC20 _newUSDTToken) external onlyOwner {
+        tokenUSDT = _newUSDTToken;
+        emit ChangeTokenAddress(address(_newUSDTToken));
+    }
+
+    function changeTransferAccount(
+        address _newTransferAccount
+    ) external onlyOwner {
+        transferAccount = _newTransferAccount;
     }
 }
