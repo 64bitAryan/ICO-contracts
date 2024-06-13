@@ -122,7 +122,7 @@ contract Crowdesale is Ownable, AffiliateProgram {
             ,
             ,
 
-        ) = dataFeed.latestRound`Data();
+        ) = dataFeed.latestRoundData();
         uint256 decimals = dataFeed.decimals();
         uint256 ethPrice = answer.toUint256().div(10 ** decimals);
         uint256 usdtAmount = value.mul(ethPrice).div(10 ** 18);
